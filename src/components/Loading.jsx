@@ -1,0 +1,1 @@
+export default function Loading({ text = "Loading..." }) { return <div className="container-app py-20 text-center text-slate-500"><div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-700"/>{text}</div>; }
