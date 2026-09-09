@@ -10,7 +10,6 @@ import ConfirmModal from "../components/ConfirmModal";
 import Pagination from "../components/Pagination";
 import RefreshButton from "../components/RefreshButton";
 
-
 const PAGE_SIZE = 20;
 
 export default function Products() {

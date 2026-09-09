@@ -1,13 +1,22 @@
-const CACHE_NAME = "happy-toys-shell-v2";
+const CACHE_NAME = "happy-toys-shell-v4";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+    caches.keys()
+      .then((keys) => Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      ))
       .then(() => self.clients.claim())
   );
 });
@@ -15,35 +24,35 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
+
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
 
+  // Always let normal browser navigation reach Vercel first.
+  // This prevents an old cached HTML document from making a new route
+  // (for example /products/rc-car) render an older admin application.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          return response;
-        })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match("/")))
+      fetch(request, { cache: "no-store" })
+        .catch(() => caches.match("/").then((cached) => cached || Response.error()))
     );
     return;
   }
 
+  // Static assets: network first, cached fallback for offline use.
   event.respondWith(
-    caches.match(request).then((cached) => {
-      return fetch(request)
-        .then((response) => {
-          if (response.ok && response.type === "basic") {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => cached || Response.error());
-    })
+    fetch(request)
+      .then((response) => {
+        if (response.ok && response.type === "basic") {
+          const copy = response.clone();
+          event.waitUntil(
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy))
+          );
+        }
+        return response;
+      })
+      .catch(() => caches.match(request).then((cached) => cached || Response.error()))
   );
 });
 
