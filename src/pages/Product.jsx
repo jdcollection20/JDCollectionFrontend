@@ -1,257 +1,155 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { Plus, Search, Trash2, Edit3 } from "lucide-react";
-
+import { Link, useParams } from "react-router-dom";
+import { ArrowLeft, MessageCircle, PlayCircle } from "lucide-react";
 import api from "../lib/api";
-import { cachedGet, cacheClearPrefix, cacheRemove } from "../lib/cache";
+import { cachedGet } from "../lib/cache";
 import { money } from "../lib/utils";
+import Loading from "../components/Loading";
 
-import ConfirmModal from "../components/ConfirmModal";
-import Pagination from "../components/Pagination";
-import RefreshButton from "../components/RefreshButton";
-
-const PAGE_SIZE = 20;
-
-export default function Products() {
-  const [products, setProducts] = useState([]),
-    [q, setQ] = useState(""),
-    [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
-  const [deleteTarget, setDeleteTarget] = useState(null),
-    [deleting, setDeleting] = useState(false);
-  const [loading, setLoading] = useState(true),
-    [refreshing, setRefreshing] = useState(false);
-
-  const cacheKey = `products:admin:${page}:${q.trim().toLowerCase()}`;
-
-  async function load(force = false) {
-    setLoading(true);
-    try {
-      const url = `/products/admin/list?page=${page}&limit=${PAGE_SIZE}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
-      const r = await cachedGet(api, url, {
-        key: cacheKey,
-        forceRefresh: force,
-      });
-      setProducts(r.data.items || []);
-      setPagination(r.data.pagination || { page, pages: 1, total: 0 });
-    } catch (e) {
-      setProducts([]);
-      alert(e.response?.data?.message || "Could not load products.");
-    } finally {
-      setLoading(false);
-    }
-  }
+export default function Product() {
+  const { slug } = useParams();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(0);
 
   useEffect(() => {
-    const t = setTimeout(() => load(false), q ? 250 : 0);
-    return () => clearTimeout(t);
-  }, [q, page]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [q]);
-
-  async function del() {
-    setDeleting(true);
-    try {
-      await api.delete(`/products/${deleteTarget._id}`);
-      setDeleteTarget(null);
-      await cacheClearPrefix("products:");
-      await cacheClearPrefix("product:");
-      await load(true);
-    } catch (e) {
-      alert(e.response?.data?.message || "Could not delete product.");
-    } finally {
-      setDeleting(false);
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const r = await cachedGet(api, `/products/${encodeURIComponent(slug)}`, {
+          key: `product:public:${slug}`,
+        });
+        if (!cancelled) {
+          setProduct(r.data);
+          setSelected(0);
+        }
+      } catch {
+        if (!cancelled) setProduct(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
+    load();
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  if (loading) return <Loading />;
+
+  if (!product) {
+    return (
+      <div className="container-app py-16 text-center">
+        <div className="text-6xl">🧸</div>
+        <h1 className="mt-4 text-3xl font-black">Product not found</h1>
+        <p className="mt-2 text-slate-500">This toy may have been removed or is no longer available.</p>
+        <Link to="/categories" className="btn-primary mt-6 inline-flex">Browse Toys</Link>
+      </div>
+    );
   }
 
-  async function refresh() {
-    setRefreshing(true);
-    try {
-      await cacheRemove(cacheKey);
-      await load(true);
-    } finally {
-      setRefreshing(false);
-    }
-  }
+  const media = [
+    ...(product.images || []).map((m) => ({ ...m, mediaType: "image" })),
+    ...(product.videos || []).map((m) => ({ ...m, mediaType: "video" })),
+  ];
+  const current = media[selected] || media[0];
 
   return (
-    <div className="mx-auto max-w-7xl">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-black">Products</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Manage prices, availability, photos and videos.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <RefreshButton onClick={refresh} busy={refreshing} />
-          <Link to="/admin/products/new" className="btn-primary">
-            <Plus size={18} /> Add Product
-          </Link>
-        </div>
-      </div>
-      <div className="card mt-6 p-4">
-        <div className="relative max-w-xl">
-          <Search
-            className="absolute left-3 top-3.5 text-slate-400"
-            size={18}
-          />
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search name or SKU..."
-            className="w-full rounded-2xl bg-slate-100 py-3 pl-10 pr-4"
-          />
-        </div>
-      </div>
+    <div className="container-app py-7 sm:py-10">
+      <Link to="/categories" className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:underline">
+        <ArrowLeft size={17} /> Back to Toys
+      </Link>
 
-      {loading ? (
-        <div className="py-12 text-center text-slate-400">
-          Loading products...
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div>
+          <div className="overflow-hidden rounded-[2rem] bg-slate-100">
+            {current?.mediaType === "video" ? (
+              <video src={current.secureUrl} controls className="aspect-square w-full object-contain" />
+            ) : current?.secureUrl ? (
+              <img src={current.secureUrl} alt={product.name} className="aspect-square w-full object-contain" />
+            ) : (
+              <div className="grid aspect-square place-items-center text-[8rem]">🧸</div>
+            )}
+          </div>
+
+          {media.length > 1 && (
+            <div className="mt-3 grid grid-cols-5 gap-2">
+              {media.map((m, i) => (
+                <button
+                  key={`${m.publicId || m.secureUrl}-${i}`}
+                  type="button"
+                  onClick={() => setSelected(i)}
+                  className={`relative overflow-hidden rounded-xl bg-slate-100 ring-2 ${selected === i ? "ring-toy-ink" : "ring-transparent"}`}
+                >
+                  {m.mediaType === "video" ? (
+                    <div className="relative">
+                      <video src={m.secureUrl} muted preload="metadata" className="aspect-square w-full object-cover" />
+                      <PlayCircle className="absolute inset-0 m-auto text-white drop-shadow" size={25} />
+                    </div>
+                  ) : (
+                    <img src={m.secureUrl} alt="" className="aspect-square w-full object-cover" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      ) : (
-        <>
-          <div className="mt-6 grid gap-3 md:hidden">
-            {products.map((x) => (
-              <div className="card p-4" key={x._id}>
-                <div className="flex gap-3">
-                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-slate-100">
-                    {x.images?.[0]?.secureUrl ? (
-                      <img
-                        src={x.images[0].secureUrl}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="grid h-full place-items-center text-3xl">
-                        🧸
-                      </div>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="font-black">{x.name}</div>
-                    <div className="mt-1 text-xs text-slate-400">
-                      {x.sku} · {x.category?.name}
-                    </div>
-                    <div className="mt-2 font-black">
-                      {money(x.sellingPrice)}{" "}
-                      {x.discountedPrice != null && (
-                        <span className="text-sm text-slate-400">
-                          → {money(x.discountedPrice)}
-                        </span>
-                      )}
-                    </div>
-                    <div
-                      className={`mt-1 text-xs font-bold ${x.isAvailable ? "text-emerald-600" : "text-red-600"}`}
-                    >
-                      {x.isAvailable ? "Available" : "Out of Stock"}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 flex gap-2">
-                  <Link
-                    className="btn-soft flex-1"
-                    to={`/admin/products/${x._id}`}
-                  >
-                    <Edit3 size={16} /> Edit
-                  </Link>
-                  <button
-                    className="btn-soft p-2 text-red-600"
-                    onClick={() => setDeleteTarget(x)}
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                </div>
-              </div>
-            ))}
+
+        <div>
+          <div className="flex flex-wrap gap-2">
+            {product.isTodaysOffer && <span className="badge bg-toy-pink text-white">🏷️ Today's Offer</span>}
+            {product.isMostDemanded && <span className="badge bg-toy-yellow text-toy-ink">🔥 Most Demanded</span>}
+            {!product.isAvailable && <span className="badge bg-slate-900 text-white">Out of Stock</span>}
           </div>
-          <div className="card mt-6 hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[1050px] text-left text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  {[
-                    "Product",
-                    "SKU",
-                    "Category",
-                    "Purchase",
-                    "Selling",
-                    "Discount",
-                    "Normal Profit",
-                    "Discount Profit",
-                    "Availability",
-                    "Actions",
-                  ].map((x) => (
-                    <th className="px-4 py-3 font-bold" key={x}>
-                      {x}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {products.map((x) => (
-                  <tr key={x._id}>
-                    <td className="px-4 py-3 font-bold">{x.name}</td>
-                    <td className="px-4 py-3">{x.sku}</td>
-                    <td className="px-4 py-3">{x.category?.name}</td>
-                    <td className="px-4 py-3">{money(x.purchasePrice)}</td>
-                    <td className="px-4 py-3">{money(x.sellingPrice)}</td>
-                    <td className="px-4 py-3">
-                      {x.discountedPrice == null
-                        ? "—"
-                        : money(x.discountedPrice)}
-                    </td>
-                    <td className="px-4 py-3">{money(x.normalProfit)}</td>
-                    <td className="px-4 py-3">
-                      {x.discountedProfit == null
-                        ? "—"
-                        : money(x.discountedProfit)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {x.isAvailable ? "Available" : "Out of Stock"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <Link
-                          className="btn-soft p-2"
-                          to={`/admin/products/${x._id}`}
-                        >
-                          <Edit3 size={16} />
-                        </Link>
-                        <button
-                          className="btn-soft p-2 text-red-600"
-                          onClick={() => setDeleteTarget(x)}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+
+          <p className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-400">
+            {product.category?.name || "Toys"}
+          </p>
+          <h1 className="mt-2 text-3xl font-black sm:text-4xl">{product.name}</h1>
+          {product.sku && <p className="mt-2 text-sm text-slate-400">SKU: {product.sku}</p>}
+
+          <div className="mt-5">
+            {product.isPriceVisible ? (
+              product.discountedPrice != null ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-lg text-slate-400 line-through">{money(product.sellingPrice)}</span>
+                  <span className="text-3xl font-black">{money(product.discountedPrice)}</span>
+                </div>
+              ) : (
+                <span className="text-3xl font-black">{money(product.sellingPrice)}</span>
+              )
+            ) : (
+              <span className="font-bold">Visit Shop for Price</span>
+            )}
           </div>
-          <Pagination
-            page={pagination.page || page}
-            pages={pagination.pages}
-            total={pagination.total}
-            onChange={setPage}
-          />
-        </>
-      )}
-      <ConfirmModal
-        open={Boolean(deleteTarget)}
-        title="Delete product?"
-        message={
-          deleteTarget
-            ? `Delete “${deleteTarget.name}”? Its product media will also be removed from Cloudinary.`
-            : ""
-        }
-        onConfirm={del}
-        onClose={() => !deleting && setDeleteTarget(null)}
-        busy={deleting}
-      />
+
+          {product.description && (
+            <div className="mt-7">
+              <h2 className="text-xl font-black">Description</h2>
+              <p className="mt-2 whitespace-pre-wrap leading-7 text-slate-600">{product.description}</p>
+            </div>
+          )}
+
+          {product.specifications && (
+            <div className="mt-7">
+              <h2 className="text-xl font-black">Specifications</h2>
+              <p className="mt-2 whitespace-pre-wrap leading-7 text-slate-600">
+                {typeof product.specifications === "string"
+                  ? product.specifications
+                  : Object.entries(product.specifications).map(([k, v]) => `${k}: ${v}`).join("\n")}
+              </p>
+            </div>
+          )}
+
+          <div className="mt-8 flex flex-wrap gap-2">
+            {!product.isAvailable ? (
+              <span className="rounded-2xl bg-slate-100 px-5 py-3 font-bold text-slate-500">Currently unavailable</span>
+            ) : (
+              <Link to="/shop" className="btn-primary">Visit Shop to Buy</Link>
+            )}
+            <Link to="/shop" className="btn-soft"><MessageCircle size={17} /> Contact Shop</Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
