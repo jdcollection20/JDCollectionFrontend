@@ -1,4 +1,4 @@
-const CACHE_NAME = "happy-toys-shell-v1";
+const CACHE_NAME = "happy-toys-shell-v2";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -34,14 +34,15 @@ self.addEventListener("fetch", (event) => {
 
   event.respondWith(
     caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
-        if (response.ok && response.type === "basic") {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-        }
-        return response;
-      });
+      return fetch(request)
+        .then((response) => {
+          if (response.ok && response.type === "basic") {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => cached || Response.error());
     })
   );
 });

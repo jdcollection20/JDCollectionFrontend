@@ -1,229 +1,255 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, MapPin, PlayCircle } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
-import api from "../lib/api";
-import { cachedGet } from "../lib/cache";
-import Loading from "../components/Loading";
-import { discountPercent, money } from "../lib/utils";
+import { Link } from "react-router-dom";
+import { Plus, Search, Trash2, Edit3 } from "lucide-react";
+import api from "../../lib/api";
+import { cachedGet, cacheClearPrefix, cacheRemove } from "../../lib/cache";
+import { money } from "../../lib/utils";
+import ConfirmModal from "../../components/ConfirmModal";
+import Pagination from "../../components/Pagination";
+import RefreshButton from "../../components/RefreshButton";
 
-export default function Product() {
-  const { slug } = useParams();
+const PAGE_SIZE = 20;
 
-  const [p, setP] = useState(null);
-  const [active, setActive] = useState(0);
+export default function Products() {
+  const [products, setProducts] = useState([]),
+    [q, setQ] = useState(""),
+    [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [deleteTarget, setDeleteTarget] = useState(null),
+    [deleting, setDeleting] = useState(false);
+  const [loading, setLoading] = useState(true),
+    [refreshing, setRefreshing] = useState(false);
+
+  const cacheKey = `products:admin:${page}:${q.trim().toLowerCase()}`;
 
   async function load(force = false) {
+    setLoading(true);
     try {
-      const r = await cachedGet(api, `/products/${slug}`, {
-        key: `product:${slug}`,
+      const url = `/products/admin/list?page=${page}&limit=${PAGE_SIZE}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
+      const r = await cachedGet(api, url, {
+        key: cacheKey,
         forceRefresh: force,
       });
-
-      setP(r.data);
-      setActive(0);
-    } catch {
-      setP(false);
+      setProducts(r.data.items || []);
+      setPagination(r.data.pagination || { page, pages: 1, total: 0 });
+    } catch (e) {
+      setProducts([]);
+      alert(e.response?.data?.message || "Could not load products.");
+    } finally {
+      setLoading(false);
     }
   }
 
   useEffect(() => {
-    load(false);
-  }, [slug]);
+    const t = setTimeout(() => load(false), q ? 250 : 0);
+    return () => clearTimeout(t);
+  }, [q, page]);
 
-  if (p === null) {
-    return <Loading />;
+  useEffect(() => {
+    setPage(1);
+  }, [q]);
+
+  async function del() {
+    setDeleting(true);
+    try {
+      await api.delete(`/products/${deleteTarget._id}`);
+      setDeleteTarget(null);
+      await cacheClearPrefix("products:");
+      await cacheClearPrefix("product:");
+      await load(true);
+    } catch (e) {
+      alert(e.response?.data?.message || "Could not delete product.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
-  if (p === false) {
-    return (
-      <div className="container-app py-20 text-center">Product not found.</div>
-    );
+  async function refresh() {
+    setRefreshing(true);
+    try {
+      await cacheRemove(cacheKey);
+      await load(true);
+    } finally {
+      setRefreshing(false);
+    }
   }
-
-  const images = p.images || [];
-  const videos = p.videos || [];
-  const specifications = p.specifications || {};
-
-  const off = discountPercent(p.sellingPrice, p.discountedPrice);
 
   return (
-    <div className="container-app py-6 sm:py-10">
-      {/* Back button */}
-      <div className="mb-5">
-        <Link to="/search" className="btn-soft">
-          <ArrowLeft size={17} />
-          Back to products
-        </Link>
-      </div>
-
-      <div className="grid gap-7 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,.9fr)] lg:items-start lg:gap-10">
-        {/* LEFT SIDE */}
-        <section>
-          {/* Main image */}
-          <div className="overflow-hidden rounded-3xl bg-slate-100 ring-1 ring-black/5">
-            {images[active]?.secureUrl ? (
-              <img
-                src={images[active].secureUrl}
-                alt={p.name}
-                className="aspect-square w-full object-contain"
-              />
-            ) : (
-              <div className="grid aspect-square place-items-center text-8xl">
-                🧸
-              </div>
-            )}
-          </div>
-
-          {/* Image thumbnails */}
-          {images.length > 0 && (
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-              {images.map((m, n) => (
-                <button
-                  key={m.publicId}
-                  type="button"
-                  onClick={() => setActive(n)}
-                  className={`h-20 w-20 shrink-0 overflow-hidden rounded-xl ring-2 ${
-                    active === n ? "ring-toy-purple" : "ring-transparent"
-                  }`}
-                >
-                  <img
-                    src={m.secureUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Videos */}
-          {videos.length > 0 && (
-            <div className="mt-7">
-              <div className="mb-3 flex items-center gap-2">
-                <PlayCircle size={19} />
-                <h2 className="text-xl font-black">Product videos</h2>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                {videos.map((v) => (
-                  <div
-                    key={v.publicId}
-                    className="overflow-hidden rounded-3xl bg-black"
-                  >
-                    <video
-                      controls
-                      preload="metadata"
-                      playsInline
-                      className="aspect-video w-full"
-                      src={v.secureUrl}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-
-        {/* RIGHT SIDE */}
-        <section className="lg:sticky lg:top-24">
-          {/* Badges */}
-          <div className="flex flex-wrap gap-2">
-            {p.isTodaysOffer && (
-              <span className="badge bg-toy-pink text-white">
-                🏷️ Today's Offer
-              </span>
-            )}
-
-            {p.isMostDemanded && (
-              <span className="badge bg-toy-yellow">🔥 Most Demanded</span>
-            )}
-
-            {!p.isAvailable && (
-              <span className="badge bg-slate-900 text-white">
-                Out of Stock
-              </span>
-            )}
-          </div>
-
-          {/* Category */}
-          <p className="mt-4 text-sm font-bold text-slate-400">
-            {p.category?.name}
+    <div className="mx-auto max-w-7xl">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-black">Products</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Manage prices, availability, photos and videos.
           </p>
-
-          {/* Product name */}
-          <h1 className="mt-1 text-3xl font-black sm:text-4xl">{p.name}</h1>
-
-          {/* PRICE */}
-          <div className="mt-5">
-            {p.isPriceVisible ? (
-              p.discountedPrice != null ? (
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-lg text-slate-400 line-through">
-                    {money(p.sellingPrice)}
-                  </span>
-
-                  <span className="text-3xl font-black">
-                    {money(p.discountedPrice)}
-                  </span>
-
-                  {off > 0 && (
-                    <span className="badge bg-toy-green">{off}% OFF</span>
-                  )}
-                </div>
-              ) : (
-                <span className="text-3xl font-black">
-                  {money(p.sellingPrice)}
-                </span>
-              )
-            ) : (
-              <div className="rounded-2xl bg-toy-yellow p-4 font-black">
-                Visit Shop for Price
-              </div>
-            )}
-          </div>
-
-          {/* Description */}
-          {p.description && (
-            <div className="mt-6">
-              <h2 className="font-black">About this toy</h2>
-
-              <p className="mt-2 whitespace-pre-wrap leading-7 text-slate-600">
-                {p.description}
-              </p>
-            </div>
-          )}
-
-          {/* Visit shop */}
-          <Link to="/shop" className="btn-primary mt-6 w-full sm:w-auto">
-            <MapPin size={18} />
-            Visit Shop
+        </div>
+        <div className="flex gap-2">
+          <RefreshButton onClick={refresh} busy={refreshing} />
+          <Link to="/admin/products/new" className="btn-primary">
+            <Plus size={18} /> Add Product
           </Link>
-
-          {/* Specifications */}
-          <div className="mt-6 rounded-3xl bg-white p-5 ring-1 ring-black/5">
-            <h2 className="font-black">Features & specifications</h2>
-
-            {Object.entries(specifications).length > 0 ? (
-              <div className="mt-3 divide-y">
-                {Object.entries(specifications).map(([k, v]) => (
-                  <div
-                    key={k}
-                    className="flex justify-between gap-4 py-2 text-sm"
-                  >
-                    <span className="text-slate-500">{k}</span>
-
-                    <b className="text-right">{v}</b>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-2 text-sm text-slate-400">
-                No specifications listed.
-              </p>
-            )}
-          </div>
-        </section>
+        </div>
       </div>
+      <div className="card mt-6 p-4">
+        <div className="relative max-w-xl">
+          <Search
+            className="absolute left-3 top-3.5 text-slate-400"
+            size={18}
+          />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search name or SKU..."
+            className="w-full rounded-2xl bg-slate-100 py-3 pl-10 pr-4"
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="py-12 text-center text-slate-400">
+          Loading products...
+        </div>
+      ) : (
+        <>
+          <div className="mt-6 grid gap-3 md:hidden">
+            {products.map((x) => (
+              <div className="card p-4" key={x._id}>
+                <div className="flex gap-3">
+                  <div className="h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-slate-100">
+                    {x.images?.[0]?.secureUrl ? (
+                      <img
+                        src={x.images[0].secureUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="grid h-full place-items-center text-3xl">
+                        🧸
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="font-black">{x.name}</div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      {x.sku} · {x.category?.name}
+                    </div>
+                    <div className="mt-2 font-black">
+                      {money(x.sellingPrice)}{" "}
+                      {x.discountedPrice != null && (
+                        <span className="text-sm text-slate-400">
+                          → {money(x.discountedPrice)}
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      className={`mt-1 text-xs font-bold ${x.isAvailable ? "text-emerald-600" : "text-red-600"}`}
+                    >
+                      {x.isAvailable ? "Available" : "Out of Stock"}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <Link
+                    className="btn-soft flex-1"
+                    to={`/admin/products/${x._id}`}
+                  >
+                    <Edit3 size={16} /> Edit
+                  </Link>
+                  <button
+                    className="btn-soft p-2 text-red-600"
+                    onClick={() => setDeleteTarget(x)}
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="card mt-6 hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[1050px] text-left text-sm">
+              <thead className="bg-slate-50">
+                <tr>
+                  {[
+                    "Product",
+                    "SKU",
+                    "Category",
+                    "Purchase",
+                    "Selling",
+                    "Discount",
+                    "Normal Profit",
+                    "Discount Profit",
+                    "Availability",
+                    "Actions",
+                  ].map((x) => (
+                    <th className="px-4 py-3 font-bold" key={x}>
+                      {x}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {products.map((x) => (
+                  <tr key={x._id}>
+                    <td className="px-4 py-3 font-bold">{x.name}</td>
+                    <td className="px-4 py-3">{x.sku}</td>
+                    <td className="px-4 py-3">{x.category?.name}</td>
+                    <td className="px-4 py-3">{money(x.purchasePrice)}</td>
+                    <td className="px-4 py-3">{money(x.sellingPrice)}</td>
+                    <td className="px-4 py-3">
+                      {x.discountedPrice == null
+                        ? "—"
+                        : money(x.discountedPrice)}
+                    </td>
+                    <td className="px-4 py-3">{money(x.normalProfit)}</td>
+                    <td className="px-4 py-3">
+                      {x.discountedProfit == null
+                        ? "—"
+                        : money(x.discountedProfit)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {x.isAvailable ? "Available" : "Out of Stock"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <Link
+                          className="btn-soft p-2"
+                          to={`/admin/products/${x._id}`}
+                        >
+                          <Edit3 size={16} />
+                        </Link>
+                        <button
+                          className="btn-soft p-2 text-red-600"
+                          onClick={() => setDeleteTarget(x)}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pagination
+            page={pagination.page || page}
+            pages={pagination.pages}
+            total={pagination.total}
+            onChange={setPage}
+          />
+        </>
+      )}
+      <ConfirmModal
+        open={Boolean(deleteTarget)}
+        title="Delete product?"
+        message={
+          deleteTarget
+            ? `Delete “${deleteTarget.name}”? Its product media will also be removed from Cloudinary.`
+            : ""
+        }
+        onConfirm={del}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        busy={deleting}
+      />
     </div>
   );
 }
