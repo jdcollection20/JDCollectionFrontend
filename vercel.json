@@ -5,13 +5,8 @@
       "destination": "https://jdcollection.onrender.com/api/:path*"
     },
     {
-      "source": "/(.*)",
-      "destination": "/index.html",
-      "exclude": [
-        "/sitemap.xml",
-        "/robots.txt",
-        "/sw.js"
-      ]
+      "source": "/((?!sitemap\\.xml|robots\\.txt|sw\\.js).*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
