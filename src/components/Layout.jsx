@@ -159,6 +159,12 @@ export default function Layout() {
               Website design & development by{" "}
               <span className="font-semibold text-slate-700">Technobeas</span>.
             </p>
+            <a
+              href="mailto:technobeas@gmail.com"
+              className="mt-1 block text-sm text-slate-500 hover:text-slate-700"
+            >
+              gamingtechno456@gmail.com
+            </a>
           </div>
         </div>
         <div className="container-app mt-7 border-t pt-5 text-center text-xs text-slate-400">
