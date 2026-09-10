@@ -160,7 +160,7 @@ export default function Layout() {
               <span className="font-semibold text-slate-700">Technobeas</span>.
             </p>
             <a
-              href="mailto:technobeas@gmail.com"
+              href="mailto:gamingtechno456@gmail.com"
               className="mt-1 block text-sm text-slate-500 hover:text-slate-700"
             >
               gamingtechno456@gmail.com
