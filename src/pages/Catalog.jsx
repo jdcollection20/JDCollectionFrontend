@@ -5,6 +5,7 @@ import { cachedGet } from "../lib/cache";
 import ProductGrid from "../components/ProductGrid";
 import Loading from "../components/Loading";
 import Pagination from "../components/Pagination";
+import SEO from "../components/SEO";
 
 const PAGE_SIZE = 12;
 
@@ -55,7 +56,7 @@ export default function Catalog({ mode }) {
     setPage(1);
   }, [q, category, mode]);
 
-  return <div className="container-app py-7 sm:py-10">
+  return <div className="container-app py-7 sm:py-10"><SEO title={`${mode === "offers" ? "Today's Offers" : mode === "popular" ? "Most Demanded" : "Search Products"} | JD COLLECTION`} description="Browse JD COLLECTION products, offers and popular picks."/>
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div><h1 className="text-3xl font-black sm:text-4xl">{mode === "offers" ? "Today's Offers" : mode === "popular" ? "Most Demanded" : "Browse Toys"}</h1><p className="mt-2 text-sm text-slate-500 sm:text-base">{mode === "offers" ? "Products marked by the shop as today's offers." : mode === "popular" ? "Products marked as popular by the shop." : "Search and explore the full catalog."}</p></div>
     </div>

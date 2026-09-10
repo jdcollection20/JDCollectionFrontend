@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowLeft, ArrowUp, ImagePlus, Trash2, Video, X } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../lib/api";
-import { cachedGet, cacheClearPrefix } from "../../lib/cache";
+import { cachedGet, cacheClearPrefix, cacheRemove } from "../../lib/cache";
 import ConfirmModal from "../../components/ConfirmModal";
 import RefreshButton from "../../components/RefreshButton";
 
@@ -34,7 +34,7 @@ export default function ProductForm() {
   const { id } = useParams();
   const nav = useNavigate();
   const [cats, setCats] = useState([]);
-  const [form, setForm] = useState({ name: "", sku: "", category: "", description: "", specifications: {}, purchasePrice: 0, sellingPrice: 0, discountedPrice: "", isPriceVisible: true, isAvailable: true, isTodaysOffer: false, isMostDemanded: false });
+  const [form, setForm] = useState({ name: "", sku: "", category: "", description: "", specifications: {}, stockQuantity: 1, colors: [], sizes: [], purchasePrice: 0, sellingPrice: 0, discountedPrice: "", isPriceVisible: true, isAvailable: true, isTodaysOffer: false, isMostDemanded: false });
   const [media, setMedia] = useState([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(Boolean(id));
@@ -131,6 +131,16 @@ export default function ProductForm() {
     }
   }
 
+  function addOption(key) {
+    setForm(f => ({ ...f, [key]: [...(f[key] || []), ""] }));
+  }
+  function updateOption(key, index, value) {
+    setForm(f => ({ ...f, [key]: (f[key] || []).map((x, i) => i === index ? value : x) }));
+  }
+  function removeOption(key, index) {
+    setForm(f => ({ ...f, [key]: (f[key] || []).filter((_, i) => i !== index) }));
+  }
+
   async function save(e) {
     e.preventDefault();
     if (form.discountedPrice !== "" && Number(form.discountedPrice) >= Number(form.sellingPrice)) {
@@ -147,6 +157,9 @@ export default function ProductForm() {
         sku: form.sku,
         category: form.category,
         description: form.description || "",
+        stockQuantity: Math.max(0, Math.floor(Number(form.stockQuantity) || 0)),
+        colors: (form.colors || []).map(x => x.trim()).filter(Boolean),
+        sizes: (form.sizes || []).map(x => x.trim()).filter(Boolean),
         specifications: form.specifications || {},
         purchasePrice: Number(form.purchasePrice),
         sellingPrice: Number(form.sellingPrice),
@@ -203,8 +216,30 @@ export default function ProductForm() {
     </div>
     <form onSubmit={save} className="card mt-6 p-4 sm:p-6">
       <div className="grid gap-4 sm:grid-cols-2">
-        {[['name','Product Name','text'],['sku','SKU / Product Code','text'],['purchasePrice','Purchase Price','number'],['sellingPrice','Selling Price','number'],['discountedPrice','Discounted Price','number']].map(([k,l,t]) => <label key={k} className="text-sm font-bold">{l}<input type={t} value={form[k]} onChange={e => set(k, e.target.value)} className="mt-2 w-full rounded-2xl bg-slate-100 p-3" required={k !== 'discountedPrice'} min={t === 'number' ? 0 : undefined} step={t === 'number' ? '0.01' : undefined}/></label>)}
+        {[['name','Product Name','text'],['sku','SKU / Product Code','text'],['stockQuantity','Quantity / Stock','number'],['purchasePrice','Purchase Price','number'],['sellingPrice','Selling Price','number'],['discountedPrice','Discounted Price','number']].map(([k,l,t]) => <label key={k} className="text-sm font-bold">{l}<input type={t} value={form[k]} onChange={e => set(k, e.target.value)} className="mt-2 w-full rounded-2xl bg-slate-100 p-3" required={k !== 'discountedPrice'} min={t === 'number' ? 0 : undefined} step={k === 'stockQuantity' ? '1' : t === 'number' ? '0.01' : undefined}/></label>)}
         <label className="text-sm font-bold">Category<select required value={form.category} onChange={e => set('category', e.target.value)} className="mt-2 w-full rounded-2xl bg-slate-100 p-3"><option value="">Select category</option>{cats.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}</select></label>
+      </div>
+      <div className="mt-5 grid gap-4 md:grid-cols-2">
+        {[
+          ["colors", "Available Colors", "Add colors only when this product has color choices."],
+          ["sizes", "Available Sizes", "Add sizes only when this product has size choices."]
+        ].map(([key, title, hint]) => (
+          <section key={key} className="rounded-2xl bg-slate-50 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div><h2 className="font-black">{title}</h2><p className="text-xs text-slate-400">{hint}</p></div>
+              <button type="button" onClick={() => addOption(key)} className="btn-soft px-3 py-2 text-xs">+ Add</button>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {(form[key] || []).map((value, index) => (
+                <div className="flex gap-2" key={`${key}-${index}`}>
+                  <input value={value} onChange={e => updateOption(key, index, e.target.value)} placeholder={key === "colors" ? "e.g. Red" : "e.g. Small"} className="min-w-0 flex-1 rounded-xl bg-white p-3 ring-1 ring-black/5" />
+                  <button type="button" onClick={() => removeOption(key, index)} className="btn-soft p-3 text-red-600" aria-label={`Remove ${key} option`}><Trash2 size={16}/></button>
+                </div>
+              ))}
+              {!form[key]?.length && <p className="text-xs text-slate-400">Leave empty to hide this section on the public product page.</p>}
+            </div>
+          </section>
+        ))}
       </div>
       <label className="mt-4 block text-sm font-bold">Description<textarea rows="5" value={form.description || ""} onChange={e => set('description', e.target.value)} className="mt-2 w-full rounded-2xl bg-slate-100 p-3"/></label>
       <div className="mt-5 grid gap-3 sm:grid-cols-2">{[['isPriceVisible','Show Public Price'],['isAvailable','Available'],['isTodaysOffer',"Today's Offer"],['isMostDemanded','Most Demanded']].map(([k,l]) => <label key={k} className="flex items-center gap-3 rounded-2xl bg-slate-50 p-4 font-bold"><input type="checkbox" checked={Boolean(form[k])} onChange={e => set(k, e.target.checked)} className="h-5 w-5"/>{l}</label>)}</div>

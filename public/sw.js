@@ -1,4 +1,4 @@
-const CACHE_NAME = "happy-toys-shell-v4";
+const CACHE_NAME = "jd-collection-shell-v5";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -60,7 +60,7 @@ self.addEventListener("push", (event) => {
   if (!event.data) return;
   const data = event.data.json();
   event.waitUntil(
-    self.registration.showNotification(data.title || "Happy Toys", {
+    self.registration.showNotification(data.title || "JD COLLECTION", {
       body: data.body || "",
       image: data.image,
       icon: "/icon-192.png",

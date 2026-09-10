@@ -35,13 +35,13 @@ function ServerSplash({ children }) {
     <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "#fffaf0" }}>
       <div style={{ width: "100%", maxWidth: 380, textAlign: "center" }}>
         <div style={{ fontSize: 64 }}>🧸</div>
-        <h1 style={{ margin: "16px 0 6px", fontSize: 30, fontWeight: 900 }}>Happy Toys</h1>
-        <p style={{ margin: 0, color: "#64748b" }}>Starting the shop...</p>
+        <h1 style={{ margin: "16px 0 6px", fontSize: 30, fontWeight: 900 }}>JD COLLECTION</h1>
+        <p style={{ margin: 0, color: "#64748b" }}>Starting JD COLLECTION...</p>
         <div style={{ height: 8, marginTop: 24, overflow: "hidden", borderRadius: 9999, background: "#e2e8f0" }}>
-          <div style={{ width: "40%", height: "100%", borderRadius: 9999, background: "#ffd84d", animation: "happy-toys-loading 1.2s ease-in-out infinite" }} />
+          <div style={{ width: "40%", height: "100%", borderRadius: 9999, background: "#ffd84d", animation: "jd-collection-loading 1.2s ease-in-out infinite" }} />
         </div>
         <p style={{ marginTop: 12, fontSize: 13, color: "#94a3b8" }}>Connecting to the server...</p>
-        <style>{`@keyframes happy-toys-loading { 0% { transform: translateX(-120%); } 50% { transform: translateX(130%); } 100% { transform: translateX(280%); } }`}</style>
+        <style>{`@keyframes jd-collection-loading { 0% { transform: translateX(-120%); } 50% { transform: translateX(130%); } 100% { transform: translateX(280%); } }`}</style>
       </div>
     </div>
   );

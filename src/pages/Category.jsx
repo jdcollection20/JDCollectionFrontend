@@ -5,6 +5,7 @@ import { cachedGet } from "../lib/cache";
 import ProductGrid from "../components/ProductGrid";
 import Pagination from "../components/Pagination";
 import Loading from "../components/Loading";
+import SEO from "../components/SEO";
 
 const PAGE_SIZE = 12;
 
@@ -34,9 +35,9 @@ export default function Category() {
   useEffect(() => { load(false); }, [slug, page]);
 
   if (loading && !c) return <Loading/>;
-  if (!c) return <div className="container-app py-20 text-center">Category not found.</div>;
+  if (!c) return <div className="container-app py-20 text-center"><SEO title="Category | JD COLLECTION" description="Browse products at JD COLLECTION."/>Category not found.</div>;
 
-  return <div className="container-app py-7 sm:py-10">
+  return <div className="container-app py-7 sm:py-10"><SEO title={`${c.name} | JD COLLECTION`} description={c.description || `Browse ${c.name} at JD COLLECTION.`}/>
     <div><h1 className="text-3xl font-black sm:text-4xl">{c.name}</h1><p className="mt-2 text-slate-500">{c.description}</p></div>
     <div className="mt-8">{loading ? <Loading/> : <ProductGrid products={p}/>}</div>
     {!loading && <Pagination page={pagination.page || page} pages={pagination.pages} total={pagination.total} onChange={setPage}/>}

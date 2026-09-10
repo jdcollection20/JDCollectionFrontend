@@ -5,6 +5,7 @@ import api from "../lib/api";
 import { cachedGet } from "../lib/cache";
 import { money } from "../lib/utils";
 import Loading from "../components/Loading";
+import SEO from "../components/SEO";
 
 export default function Product() {
   const { slug } = useParams();
@@ -53,8 +54,10 @@ export default function Product() {
   ];
   const current = media[selected] || media[0];
 
+  const seoDescription = product.description || `View ${product.name} at JD COLLECTION.`;
   return (
     <div className="container-app py-7 sm:py-10">
+      <SEO title={`${product.name} | JD COLLECTION`} description={seoDescription} canonical={`${window.location.origin}/products/${product.slug}`} />
       <Link to="/categories" className="mb-5 inline-flex items-center gap-2 text-sm font-bold text-slate-600 hover:underline">
         <ArrowLeft size={17} /> Back to Toys
       </Link>
@@ -107,6 +110,24 @@ export default function Product() {
           <h1 className="mt-2 text-3xl font-black sm:text-4xl">{product.name}</h1>
           {product.sku && <p className="mt-2 text-sm text-slate-400">SKU: {product.sku}</p>}
 
+          {product.colors?.length > 0 && (
+            <div className="mt-6">
+              <h2 className="text-sm font-black">Available Colors</h2>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {product.colors.map(color => <span key={color} className="rounded-xl border bg-white px-3 py-2 text-sm font-semibold">{color}</span>)}
+              </div>
+            </div>
+          )}
+
+          {product.sizes?.length > 0 && (
+            <div className="mt-5">
+              <h2 className="text-sm font-black">Available Sizes</h2>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {product.sizes.map(size => <span key={size} className="rounded-xl border bg-white px-3 py-2 text-sm font-semibold">{size}</span>)}
+              </div>
+            </div>
+          )}
+
           <div className="mt-5">
             {product.isPriceVisible ? (
               product.discountedPrice != null ? (
@@ -126,17 +147,6 @@ export default function Product() {
             <div className="mt-7">
               <h2 className="text-xl font-black">Description</h2>
               <p className="mt-2 whitespace-pre-wrap leading-7 text-slate-600">{product.description}</p>
-            </div>
-          )}
-
-          {product.specifications && (
-            <div className="mt-7">
-              <h2 className="text-xl font-black">Specifications</h2>
-              <p className="mt-2 whitespace-pre-wrap leading-7 text-slate-600">
-                {typeof product.specifications === "string"
-                  ? product.specifications
-                  : Object.entries(product.specifications).map(([k, v]) => `${k}: ${v}`).join("\n")}
-              </p>
             </div>
           )}
 

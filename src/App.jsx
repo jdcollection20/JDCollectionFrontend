@@ -8,6 +8,8 @@ import Categories from "./pages/Categories";
 import Category from "./pages/Category";
 import Product from "./pages/Product";
 import Shop from "./pages/Shop";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 import Login from "./pages/Login";
 import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
@@ -15,6 +17,8 @@ import ProductForm from "./pages/admin/ProductForm";
 import AdminCategories from "./pages/admin/Categories";
 import Settings from "./pages/admin/Settings";
 import Notifications from "./pages/admin/Notifications";
+import CreateOrder from "./pages/admin/CreateOrder";
+import Returns from "./pages/admin/Returns";
 
 function Protected() {
   const { admin, loading } = useAuth();
@@ -42,6 +46,8 @@ export default function App() {
         <Route path="/search" element={<Catalog />} />
         <Route path="/products/:slug" element={<Product />} />
         <Route path="/shop" element={<Shop />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
       </Route>
       <Route path="/admin/login" element={<Login />} />
       <Route path="/admin" element={<Protected />}>
@@ -49,6 +55,8 @@ export default function App() {
         <Route path="products" element={<Products />} />
         <Route path="products/new" element={<ProductForm />} />
         <Route path="products/:id" element={<ProductForm />} />
+        <Route path="orders/new" element={<CreateOrder />} />
+        <Route path="returns" element={<Returns />} />
         <Route path="categories" element={<AdminCategories />} />
         <Route path="notifications" element={<Notifications />} />
         <Route path="settings" element={<Settings />} />

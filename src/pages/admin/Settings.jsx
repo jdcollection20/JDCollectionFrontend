@@ -5,7 +5,7 @@ import { cachedGet, cacheRemove, cacheSet } from "../../lib/cache";
 import RefreshButton from "../../components/RefreshButton";
 
 const emptySettings = {
-  shopName: "",
+  shopName: "JD COLLECTION",
   address: "",
   phone: "",
   whatsapp: "",

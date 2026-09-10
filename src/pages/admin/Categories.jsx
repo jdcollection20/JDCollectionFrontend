@@ -14,6 +14,7 @@ export default function Categories() {
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [form, setForm] = useState(empty), [file, setFile] = useState(null), [preview, setPreview] = useState("");
   const [editing, setEditing] = useState(null), [saving, setSaving] = useState(false), [deleteTarget, setDeleteTarget] = useState(null), [refreshing, setRefreshing] = useState(false);
+  const [info, setInfo] = useState(null);
 
   const cacheKey = `categories:admin:${page}`;
 
@@ -22,7 +23,7 @@ export default function Categories() {
       const r = await cachedGet(api, `/categories?active=false&page=${page}&limit=${PAGE_SIZE}`, { key: cacheKey, forceRefresh: force });
       setCategories(r.data?.items || r.data || []);
       setPagination(r.data?.pagination || { page, pages: 1, total: r.data?.length || 0 });
-    } catch (e) { alert(e.response?.data?.message || "Could not load categories."); }
+    } catch (e) { setInfo({ title: "Could not load categories", message: e.response?.data?.message || "Please try again." }); }
   }
   useEffect(() => { load(false); }, [page]);
 
@@ -40,7 +41,9 @@ export default function Categories() {
     setFile(null); setPreview(c.image?.secureUrl||""); window.scrollTo({top:0,behavior:"smooth"});
   }
   async function save(e) {
-    e.preventDefault(); if (!form.name.trim()) return; setSaving(true);
+    e.preventDefault();
+    if (!form.name.trim()) { setInfo({ title: "Category name required", message: "Enter a category name before saving." }); return; }
+    setSaving(true);
     try {
       const fd = new FormData();
       fd.append("name", form.name.trim()); fd.append("description", form.description||""); fd.append("isActive", String(form.isActive)); fd.append("sortOrder", String(form.sortOrder||0));
@@ -48,7 +51,7 @@ export default function Categories() {
       await (editing ? api.put(`/categories/${editing}`,fd) : api.post("/categories",fd));
       await cacheClearPrefix("categories:"); await cacheClearPrefix("products:"); await cacheClearPrefix("product:");
       reset(); await load(true);
-    } catch(e) { alert(e.response?.data?.message||"Could not save category."); } finally { setSaving(false); }
+    } catch(e) { setInfo({ title: "Could not save category", message: e.response?.data?.message || "Please try again." }); } finally { setSaving(false); }
   }
   function removePreview() {
     if (file && preview.startsWith("blob:")) URL.revokeObjectURL(preview);
@@ -57,7 +60,7 @@ export default function Categories() {
   async function confirmDelete() {
     setSaving(true);
     try { await api.delete(`/categories/${deleteTarget._id}`); setDeleteTarget(null); await cacheClearPrefix("categories:"); await cacheClearPrefix("products:"); await cacheClearPrefix("product:"); await load(true); }
-    catch(e) { alert(e.response?.data?.message||"Could not delete category."); }
+    catch(e) { setInfo({ title: "Could not delete category", message: e.response?.data?.message || "Please try again." }); }
     finally { setSaving(false); }
   }
   async function refresh() {
@@ -83,5 +86,6 @@ export default function Categories() {
     <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{categories.map(c=><div className="card overflow-hidden" key={c._id}><div className="aspect-[16/9] bg-slate-100">{c.image?.secureUrl?<img src={c.image.secureUrl} alt="" className="h-full w-full object-cover"/>:<div className="grid h-full place-items-center text-5xl">🧩</div>}</div><div className="p-5"><div className="flex items-start justify-between gap-3"><div><div className="font-black">{c.name}</div><div className="mt-1 text-sm text-slate-400">{c.productCount} products · {c.isActive?"Public":"Hidden"}</div></div><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold">#{c.sortOrder||0}</span></div><div className="mt-4 flex gap-2"><button className="btn-soft flex-1" onClick={()=>startEdit(c)}><Edit3 size={16}/> Edit</button><button className="btn-soft p-2 text-red-600" onClick={()=>setDeleteTarget(c)}><Trash2 size={17}/></button></div></div></div>)}</div>
     <Pagination page={pagination.page||page} pages={pagination.pages} total={pagination.total} onChange={setPage}/>
     <ConfirmModal open={Boolean(deleteTarget)} title="Delete category?" message={deleteTarget?`Delete “${deleteTarget.name}”? Categories containing products cannot be deleted until those products are moved or removed.`:""} onConfirm={confirmDelete} onClose={()=>!saving&&setDeleteTarget(null)} busy={saving}/>
+    <ConfirmModal open={Boolean(info)} title={info?.title || "Information"} message={info?.message || ""} confirmText="Okay" onConfirm={()=>setInfo(null)} onClose={()=>setInfo(null)} showCancel={false} danger={false}/>
   </div>;
 }

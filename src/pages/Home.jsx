@@ -6,6 +6,7 @@ import { cachedGet } from "../lib/cache";
 import ProductGrid from "../components/ProductGrid";
 import Section from "../components/Section";
 import Loading from "../components/Loading";
+import SEO from "../components/SEO";
 
 const KEYS = {
   settings: "settings:public",
@@ -34,7 +35,7 @@ export default function Home() {
       setPopular(p.data?.items || []);
     } catch (e) {
       console.error("Failed to load home page", e);
-      if (!settings) setSettings({ shopName: "Toy Shop", description: "", heroContent: {}, address: "" });
+      if (!settings) setSettings({ shopName: "JD COLLECTION", description: "", heroContent: {}, address: "" });
     }
   }
 
@@ -47,7 +48,7 @@ export default function Home() {
   if (!settings) return <Loading />;
   const hero = settings.heroContent || {};
 
-  return <div>
+  return <div><SEO title={`${settings.shopName || "JD COLLECTION"} | Toys, Watches, Perfumes & Gifts`} description={settings.description || "Browse JD COLLECTION toys, watches, perfumes, gifts and offers."}/>
     <section className="overflow-hidden bg-toy-yellow">
       <div className="container-app grid min-h-[420px] items-center gap-8 py-10 sm:py-12 md:grid-cols-2">
         <div>
