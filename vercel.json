@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://jdcollectionbackend.onrender.com/api/:path*"
+      "destination": "https://jdcollection.onrender.com/api/:path*"
     },
     {
       "source": "/(.*)",
