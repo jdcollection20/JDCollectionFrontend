@@ -176,7 +176,7 @@ export default function Home() {
                 Visit {settings.shopName || "our shop"}
               </h2>
               <p className="mt-2 max-w-2xl text-sm text-gray-300/70">
-                {settings.address || "Shop address coming soon."}
+                {settings.address || "KAT KAT GATE OPPOSITE TAIBA BURKHA MALL"}
               </p>
             </div>
             <Link className="btn-yellow shrink-0" to="/shop">
