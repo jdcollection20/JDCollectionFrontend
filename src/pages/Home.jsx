@@ -80,7 +80,7 @@ export default function Home() {
       <section className="overflow-hidden bg-toy-yellow">
         <div className="container-app grid min-h-[420px] items-center gap-8 py-10 sm:py-12 md:grid-cols-2">
           <div>
-            <span className="badge bg-white">🎁 Local toy shop</span>
+            {/* <span className="badge bg-white">🎁 Local toy shop</span> */}
             <h1 className="mt-4 text-4xl font-black leading-tight sm:text-5xl md:text-6xl">
               {hero.title || "Big fun starts here!"}
             </h1>
@@ -175,7 +175,7 @@ export default function Home() {
               <h2 className="text-2xl font-black sm:text-3xl">
                 Visit {settings.shopName || "our shop"}
               </h2>
-              <p className="mt-2 max-w-2xl text-sm text-gray-300/70">
+              <p className="mt-2 max-w-2xl text-sm text-gray-600/70">
                 {settings.address || "KAT KAT GATE OPPOSITE TAIBA BURKHA MALL"}
               </p>
             </div>
